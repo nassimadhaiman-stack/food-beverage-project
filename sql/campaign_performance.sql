@@ -1,13 +1,10 @@
--- Performance des campagnes marketing par type et audience cible
+-- Campagnes les plus éfficaces
 SELECT 
     CAMPAIGN_TYPE,
-    TARGET_AUDIENCE,
-    PRODUCT_CATEGORY,
-    SUM(BUDGET) AS total_investment,
-    SUM(REACH) AS total_reach,
-    AVG(CONVERSION_RATE) AS avg_conversion_rate,
-    -- Calcul de l'efficacité (coût par personne touchée)
-    CASE WHEN SUM(REACH) > 0 THEN SUM(BUDGET) / SUM(REACH) ELSE 0 END AS cost_per_reach
-FROM FOOD_BEVERAGE.FB_SILVER.marketing_campaigns_clean
-GROUP BY 1, 2, 3
-ORDER BY avg_conversion_rate DESC;
+    COUNT(*) AS nb_campaigns,
+    ROUND(AVG(conversion_rate) * 100, 2) AS avg_conversion_rate_pct,
+    ROUND(SUM(conversion_rate * reach), 0) AS estimated_conversions,
+    SUM(budget) AS total_budget
+FROM MARKETING_CAMPAIGNS_CLEAN
+GROUP BY CAMPAIGN_TYPE
+ORDER BY estimated_conversions desc;
