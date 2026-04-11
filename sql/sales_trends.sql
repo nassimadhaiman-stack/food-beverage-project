@@ -41,6 +41,60 @@ WHERE TRANSACTION_TYPE = 'SALE'
 GROUP BY 1
 ORDER BY ca_total DESC;
 
+-- Impact_des_interactions_sur_les_ventes
+   -- voir si le chiffre d'affaire monte ou descend selon le fait que la satisfaction des clients monte ou descende
+USE schema FOOD_BEVERAGE.FB_SILVER;
+WITH interactions_stats AS (
+    SELECT 
+        TO_CHAR(interaction_date, 'YYYY-MM') AS year_month,
+        COUNT(*) as total_interactions,
+        AVG(customer_satisfaction) as avg_satisfaction
+    FROM customer_service_interactions_clean
+    GROUP BY 1
+),
+sales_stats AS (
+    SELECT 
+        TO_CHAR(transaction_date, 'YYYY-MM') AS year_month,
+        SUM(amount) AS total_sales
+    FROM FINANCIAL_TRANSACTIONS_CLEAN
+    WHERE transaction_type = 'SALE'
+    GROUP BY 1
+)
+SELECT 
+    i.year_month,
+    i.avg_satisfaction,
+    i.total_interactions,
+    s.total_sales
+FROM interactions_stats i
+JOIN sales_stats s ON i.year_month = s.year_month
+ORDER BY i.year_month, i.avg_satisfaction desc ;
+
+-- Impact_des_avis_sur_les_ventes
+WITH reviews_stats AS (
+    SELECT
+        TO_CHAR(REVIEW_DATE, 'YYYY-MM')  AS year_month,
+        ROUND(AVG(RATING), 2)            AS avg_rating,
+        COUNT(*)                         AS nb_avis
+    FROM product_reviews_clean
+    GROUP BY 1
+),
+sales_stats AS (
+    SELECT
+        TO_CHAR(TRANSACTION_DATE, 'YYYY-MM') AS year_month,
+        ROUND(SUM(AMOUNT), 2)                AS total_sales
+    FROM financial_transactions_clean
+    WHERE TRANSACTION_TYPE = 'SALE'
+    GROUP BY 1
+)
+SELECT
+    r.year_month,
+    r.avg_rating,
+    r.nb_avis,
+    s.total_sales
+FROM reviews_stats r
+JOIN sales_stats s ON r.year_month = s.year_month
+ORDER BY r.year_month, r.avg_rating desc;
+
 -- Répartition des clients par segments démographiques
 -- Par région
 SELECT 
