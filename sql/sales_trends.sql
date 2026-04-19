@@ -96,11 +96,12 @@ JOIN sales_stats s ON r.year_month = s.year_month
 ORDER BY r.year_month, r.avg_rating desc;
 
 -- Répartition des clients par segments démographiques
+
 -- Par région
 SELECT 
     Region,
     count(*) as nb_customers,
-    FROM customer_demographics_clean
+    FROM FOOD_BEVERAGE.FB_SILVER.customer_demographics_clean
     GROUP BY 1
     ORDER BY 2;
     
@@ -108,7 +109,7 @@ SELECT
 SELECT 
     Gender,
     count(*) as nb_customers,
-    FROM customer_demographics_clean
+    FROM FOOD_BEVERAGE.FB_SILVER.customer_demographics_clean
     GROUP BY 1
     ORDER BY 2;
 
@@ -116,6 +117,63 @@ SELECT
 SELECT 
     MARITAL_STATUS,
     count(*) as nb_customers,
-    FROM customer_demographics_clean
+    FROM FOOD_BEVERAGE.FB_SILVER.customer_demographics_clean
     GROUP BY 1
     ORDER BY 2;
+
+WITH customer_age_class AS (
+
+    SELECT 
+
+        CUSTOMER_ID,
+
+        DATE_OF_BIRTH,
+
+        TIMESTAMPDIFF(YEAR, DATE_OF_BIRTH, '2023-12-30') AS AGE,
+
+        CASE
+
+            WHEN TIMESTAMPDIFF(YEAR, DATE_OF_BIRTH, '2023-12-30') < 25              THEN 'Young Adult'
+
+            WHEN TIMESTAMPDIFF(YEAR, DATE_OF_BIRTH, '2023-12-30') BETWEEN 25 AND 44 THEN 'Adult'
+
+            WHEN TIMESTAMPDIFF(YEAR, DATE_OF_BIRTH, '2023-12-30') BETWEEN 45 AND 64 THEN 'Middle Aged'
+
+            WHEN TIMESTAMPDIFF(YEAR, DATE_OF_BIRTH, '2023-12-30') >= 65             THEN 'Senior'
+
+        END AS AGE_GROUP
+
+    FROM FOOD_BEVERAGE.FB_SILVER.customer_demographics_clean
+
+),
+
+customer_income_class AS (
+
+    SELECT
+
+        CUSTOMER_ID,
+
+        CASE
+
+            WHEN ANNUAL_INCOME BETWEEN 20038  AND 64998  THEN 'Low Income'
+
+            WHEN ANNUAL_INCOME BETWEEN 64999  AND 109959 THEN 'Middle Income'
+
+            WHEN ANNUAL_INCOME BETWEEN 109960 AND 154920 THEN 'Upper-Middle Income'
+
+            WHEN ANNUAL_INCOME BETWEEN 154921 AND 199881 THEN 'High Income'
+
+        END AS INCOME_CATEGORY
+
+    FROM FOOD_BEVERAGE.FB_SILVER.customer_demographics_clean
+
+)
+ 
+SELECT 
+    a.AGE_GROUP,
+    i.INCOME_CATEGORY,
+    COUNT(a.CUSTOMER_ID) as nb_customers
+FROM customer_age_class a
+JOIN customer_income_class i ON a.CUSTOMER_ID = i.CUSTOMER_ID
+GROUP BY 1, 2
+ORDER BY 1, 2;    
