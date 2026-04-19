@@ -34,18 +34,22 @@ WITH flagged_sales AS (
         T.region,
         P.PRODUCT_CATEGORY,
         P.PROMOTION_TYPE,
+        P.DISCOUNT_RATE,
         CASE WHEN P.promotion_id IS NOT NULL THEN 'With Promo' ELSE 'Without Promo' END AS promo_status
-    FROM FINANCIAL_TRANSACTIONS_CLEAN T
-    LEFT JOIN PROMOTION_DATA_CLEAN P 
+    FROM FOOD_BEVERAGE.FB_SILVER.FINANCIAL_TRANSACTIONS_CLEAN T
+    LEFT JOIN FOOD_BEVERAGE.FB_SILVER.PROMOTION_DATA_CLEAN P 
         ON T.region = P.region 
         AND T.transaction_date BETWEEN P.start_date AND P.end_date
     WHERE T.transaction_type = 'SALE'
 )
-SELECT 
+SELECT
+    product_category,
+    discount_rate,
+    region,
     promo_status,
     COUNT(DISTINCT transaction_id) as nb_transactions, 
     SUM(amount) as total_revenue,
     AVG(amount) as average_ticket
 FROM flagged_sales
-GROUP BY 1
+GROUP BY 1,2,3,4
 ORDER BY 1, 3;
