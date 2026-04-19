@@ -63,22 +63,22 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY TRANSACTION_ID ORDER BY TRANSACTION_DATE
 -- ------------------------------------------------------------
 -- 4. Promotion Data
 -- ------------------------------------------------------------
-CREATE OR REPLACE TABLE FOOD_BEVERAGE.FB_SILVER.promotion_data_clean AS
+CREATE OR REPLACE TABLE FOOD_BEVERAGE.FB_SILVER.PROMOTION_DATA_CLEAN AS
 SELECT 
     PROMOTION_ID,
-    UPPER(TRIM(product_category)) AS product_category,
-    UPPER(TRIM(promotion_type)) AS promotion_type,
-    -- Standardisation du taux : s'assurer qu'il est entre 0 et 1
+    UPPER(TRIM(PRODUCT_CATEGORY))  AS PRODUCT_CATEGORY,
+    UPPER(TRIM(PROMOTION_TYPE))    AS PROMOTION_TYPE,
     CASE 
         WHEN DISCOUNT_PERCENTAGE > 1 THEN DISCOUNT_PERCENTAGE / 100 
         ELSE DISCOUNT_PERCENTAGE 
-    END AS DISCOUNT_RATE,
-    TO_DATE(START_DATE) AS START_DATE,
-    TO_DATE(END_DATE) AS END_DATE,
-    UPPER(TRIM(region)) AS region
-FROM Promotion_data
--- Sécurité métier : la date de fin doit être après la date de début
-WHERE TO_DATE(END_DATE) >= TO_DATE(START_DATE);
+    END                            AS DISCOUNT_RATE,
+    TO_DATE(START_DATE)            AS START_DATE,
+    TO_DATE(END_DATE)              AS END_DATE,
+    UPPER(TRIM(REGION))            AS REGION          
+
+FROM PROMOTION_DATA
+WHERE TO_DATE(END_DATE) >= TO_DATE(START_DATE)
+  AND REGION NOT IN ('0', '1'); 
 
 -- ------------------------------------------------------------
 -- 5. Marketing Campaigns
