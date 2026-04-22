@@ -25,8 +25,8 @@ Amazon S3 (logbrain-datalake)
                     │
                     └──► FOOD_BEVERAGE.ANALYTICS  (vues analytiques & data products)
 
----
 
+```
 ## Structure du projet
 
 ```
@@ -65,19 +65,19 @@ CREATE STAGE IF NOT EXISTS FB_STAGE
 
 ### Étape 2 — Tables créées dans FB_BRONZE
 
-| Table | Source | Format | Particularités |
-|---|---|---|---|
-| `customer_demographics` | `customer_demographics.csv` | CSV | PK `customer_id` INTEGER |
-| `customer_service_interactions` | `customer_service_interactions.csv` | CSV | Descriptions longues (TEXT) |
-| `financial_transactions` | `financial_transactions.csv` | CSV | Amount en FLOAT |
-| `promotion_data` | `promotions-data.csv` | CSV | Discount en FLOAT |
-| `marketing_campaigns` | `marketing_campaigns.csv` | CSV | Budget/Reach avec espaces |
-| `product_reviews` | `product_reviews.csv` | CSV (TSV) | Séparateur `\t`, mapping colonnes custom |
-| `inventory` | `inventory.json` | JSON → VARIANT | Parsing via colonne `v VARIANT` |
-| `store_location` | `store_locations.json` | JSON → VARIANT | Parsing via colonne `v VARIANT` |
-| `logistics_and_shipping` | `logistics_and_shipping.csv` | CSV | Régions NULL possibles |
-| `supplier_information` | `supplier_information.csv` | CSV | Quality rating VARCHAR(1) |
-| `employee_records` | `employee_records.csv` | CSV | Salary avec espaces |
+| Table | Source | Format | 
+|---|---|---|
+| `customer_demographics` | `customer_demographics.csv` | CSV | 
+| `customer_service_interactions` | `customer_service_interactions.csv` | CSV | 
+| `financial_transactions` | `financial_transactions.csv` | CSV |
+| `promotion_data` | `promotions-data.csv` | CSV |
+| `marketing_campaigns` | `marketing_campaigns.csv` | CSV | 
+| `product_reviews` | `product_reviews.csv` | CSV (TSV) |
+| `inventory` | `inventory.json` | JSON → VARIANT | 
+| `store_location` | `store_locations.json` | JSON → VARIANT |
+| `logistics_and_shipping` | `logistics_and_shipping.csv` | CSV | 
+| `supplier_information` | `supplier_information.csv` | CSV | 
+| `employee_records` | `employee_records.csv` | CSV |
 
 ### Étape 3 — Chargement
 
@@ -98,7 +98,7 @@ CREATE OR REPLACE FILE FORMAT csv_reviews
     TYPE = 'CSV' FIELD_DELIMITER = '\t' SKIP_HEADER = 1;
 ```
 
-> **Point notable** : le fichier `product_reviews.csv` utilise un délimiteur tabulation et contient des colonnes supplémentaires (helpful_votes, etc.). Le `COPY INTO` utilise une projection positionnelle `$1, $2, $3, $4, $7, $8, $9, $10, $11` avec `ON_ERROR = 'CONTINUE'`.
+> **Point notable** : le fichier `product_reviews.csv` utilise un délimiteur tabulation et contient des colonnes supplémentaires. Le `COPY INTO` utilise une projection positionnelle `$1, $2, $3, $4, $7, $8, $9, $10, $11` avec `ON_ERROR = 'CONTINUE'`.
 
 > **Fichiers JSON** : ingérés via tables VARIANT intermédiaires (`Json_inventory`, `Json_store_location`), puis transférés dans les tables structurées via `INSERT INTO ... SELECT v:field::TYPE`, avant suppression des tables VARIANT.
 
@@ -119,17 +119,17 @@ FROM financial_transactions;
 
 ---
 
-## 🧹 Phase 1 — Data Cleaning (schéma FB_SILVER)
+### Étape 5 — Data Cleaning (schéma FB_SILVER)
 
 Pour chaque table BRONZE, une table `*_clean` est créée dans `FB_SILVER`. Voici les règles appliquées :
 
-### Règles communes à toutes les tables
+#### Règles communes à toutes les tables
 - `TRIM()` sur toutes les colonnes texte
 - `TO_DATE()` pour harmoniser toutes les dates
 - `ABS()` sur les montants, salaires et stocks (valeurs positives obligatoires)
 - `QUALIFY ROW_NUMBER() = 1` pour dédupliquer par clé primaire
 
-### Règles spécifiques par table
+#### Règles spécifiques par table
 
 **`customer_demographics_clean`**
 - `REGEXP_REPLACE` pour supprimer les titres (MD, DDS, PhD, Jr., Sr., IV, III)
@@ -172,7 +172,7 @@ Pour chaque table BRONZE, une table `*_clean` est créée dans `FB_SILVER`. Voic
 
 ---
 
-## 📊 Phase 2 — Exploration & Analyses Business
+## Phase 2 — Exploration & Analyses Business
 
 ### Partie 2.1 — Périmètre des datasets (schéma SILVER)
 
@@ -201,11 +201,11 @@ Contrôles systématiques appliqués à chaque table :
 
 ---
 
-## 🧩 Phase 3 — Data Products & Analytics
+### Phase 3 — Data Products & Analytics
 
-### Schéma ANALYTICS — 3 vues enrichies
+#### Schéma ANALYTICS — 3 vues enrichies
 
-#### `PROMOTIONS_ACTIVES`
+##### `PROMOTIONS_ACTIVES`
 Vue combinant promotions et transactions financières pour mesurer l'impact réel des promotions sur les ventes.
 
 **Logique :** jointure temporelle entre `promotion_data_clean` et `financial_transactions_clean` sur `REGION` et `TRANSACTION_DATE BETWEEN START_DATE AND END_DATE`.
@@ -218,7 +218,7 @@ Vue combinant promotions et transactions financières pour mesurer l'impact rée
 - `AVG_BASKET_DURING_PROMO`
 - `SALES_PER_PROMO_DAY` (efficacité journalière de la promo)
 
-#### `CUSTOMERS_ENRICHED`
+##### `CUSTOMERS_ENRICHED`
 Vue agrégeant les données démographiques clients avec les KPIs de ventes régionaux.
 
 **Segmentations créées :**
@@ -231,7 +231,7 @@ Vue agrégeant les données démographiques clients avec les KPIs de ventes rég
 
 > Note : la jointure se fait au niveau région (pas de `customer_id` dans les transactions), ce qui donne une approximation régionale des comportements d'achat.
 
-#### `REGION_ENRICHED`
+##### `REGION_ENRICHED`
 Vue consolidée à la maille région, croisant 4 sources de données :
 
 | Dimension | Source |
@@ -244,14 +244,13 @@ Vue consolidée à la maille région, croisant 4 sources de données :
 **KPIs calculés :**
 - `PROMO_SALES_SHARE_PCT` — part des ventes réalisées en période promo
 - `REACH_PER_BUDGET` — efficacité media des campagnes
-- `SALES_PER_CAMPAIGN_DOLLAR` — ROI marketing par région
 - `DOMINANT_CAMPAIGN_TYPE` / `DOMINANT_TARGET_AUDIENCE`
 
 ---
 
-## 📈 Dashboards Streamlit
+## Dashboards Streamlit
 
-### 1. 🏷️ Promotions Analytics (`promotion_analysis.py`)
+### 1. Promotions Analytics (`promotion_analysis.py`)
 **Source :** `FOOD_BEVERAGE.ANALYTICS.PROMOTIONS_ACTIVES`
 
 - **Filtres :** Région, Catégorie produit, Statut promotion
@@ -259,7 +258,7 @@ Vue consolidée à la maille région, croisant 4 sources de données :
 - **Graphique :** Ventes totales par région (bar chart)
 - **Tableau :** Détail des promotions filtrées avec discount formaté en %
 
-### 2. 👥 Customer Intelligence Dashboard (`customer_dashboard.py`)
+### 2. Customer Intelligence Dashboard (`customer_dashboard.py`)
 **Source :** `FOOD_BEVERAGE.ANALYTICS.CUSTOMERS_ENRICHED`
 
 - **Filtres :** Région, Niveau de revenu, Tranche d'âge
@@ -269,7 +268,7 @@ Vue consolidée à la maille région, croisant 4 sources de données :
 - **Graphique 3 :** Panier moyen par Région × Âge (bar groupé)
 - **Tableau :** Liste client enrichie complète
 
-### 3. 📊 Region Analytics Dashboard (`region_dashboard.py`)
+### 3. Region Analytics Dashboard (`region_dashboard.py`)
 **Source :** `FOOD_BEVERAGE.ANALYTICS.REGION_ENRICHED`
 
 - **Filtres :** Région, Type de campagne dominant
@@ -282,7 +281,7 @@ Vue consolidée à la maille région, croisant 4 sources de données :
 
 ---
 
-## 🔑 Points techniques notables
+## Points techniques notables
 
 | Défi | Solution retenue |
 |---|---|
@@ -292,41 +291,7 @@ Vue consolidée à la maille région, croisant 4 sources de données :
 | Montants/salaires avec espaces comme séparateurs | `REPLACE(col, ' ', '')` avant `CAST AS NUMBER` |
 | Discount parfois en % (ex: 15) parfois en décimal (0.15) | `CASE WHEN > 1 THEN /100 ELSE col END` |
 | Régions vides dans `logistics_and_shipping` | `COALESCE(NULLIF(...,''), 'UNKNOWN')` |
-| Jointure promo ↔ transactions sans clé directe | Jointure temporelle sur `REGION` + `BETWEEN START_DATE AND END_DATE` |
+| Jointure promo ↔ transactions sans clé directe | Jointure spatiale et temporelle sur `REGION` + `BETWEEN START_DATE AND END_DATE` |
 
 ---
 
-## 🚀 Démarrage rapide
-
-### Prérequis
-- Compte Snowflake (Enterprise, AWS us-west-2)
-- Python 3.8+ avec Streamlit et Snowpark
-
-### 1. Initialiser l'environnement Snowflake
-```sql
--- Exécuter dans l'ordre :
--- 1. sql/Load_data.sql   (création DB, schémas, stage, tables, COPY INTO)
--- 2. sql/clean_data.sql  (tables FB_SILVER)
--- 3. analytics/*.sql     (vues ANALYTICS)
-```
-
-### 2. Lancer les dashboards Streamlit
-Déployer directement dans Snowflake via **Streamlit in Snowflake** ou localement :
-```bash
-pip install streamlit snowflake-snowpark-python plotly
-streamlit run streamlit/promotion_analysis.py
-```
-
----
-
-## 👥 Équipe
-
-Projet réalisé dans le cadre du **MBA ESG 2026** — cours Architecture Big Data.
-
----
-
-## 📧 Soumission
-
-**Objet email :** `MBAESG_EVALUATION_ARCHITECTURE_BIGDATA_2026`  
-**Destinataire :** axel@logbrain.fr  
-**Contenu :** lien GitHub + accès Snowflake (URL, user, password)
