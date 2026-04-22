@@ -1,4 +1,4 @@
-# AnyCompany Food & Beverage — Data-Driven Marketing Analytics
+# AnyCompany Food & Beverage - Data-Driven Marketing Analytics
 
 > **Projet MBA ESG 2026** · Snowflake · Streamlit · SQL Analytics
 > ** Equipe : Assitan SINEYOKO & Nassima DHAIMAN
@@ -11,7 +11,7 @@ Le PDG a lancé une **initiative de transformation digitale** confiée à Sarah,
 
 ---
 
-## 🏗️ Architecture technique
+## Architecture technique
 
 ```
 Amazon S3 (logbrain-datalake)
@@ -42,17 +42,17 @@ food-beverage-project/
 │   ├── customer analytics.py    # Customer Intelligence Dashboard
 │   └── region analytics.py      # Region Analytics Dashboard
 ├── ml/
-│   ├── promotions actives.sql   # Vue data product — promotions enrichies
-│   ├── clients enrechis.sql   # Vue data product — clients enrichis
-│   └── regions enrichies.sql      # Vue data product — region enrichies
+│   ├── promotions actives.sql   # Vue data product - promotions enrichies
+│   ├── clients enrechis.sql   # Vue data product - clients enrichis
+│   └── regions enrichies.sql      # Vue data product - region enrichies
 └── README.md
 ```
 
 ---
 
-## ⚙️ Phase 1 — Data Preparation & Ingestion
+## ⚙️ Phase 1 - Data Preparation & Ingestion
 
-### Étape 1 — Environnement Snowflake
+### Étape 1 - Environnement Snowflake
 
 ```sql
 CREATE DATABASE IF NOT EXISTS FOOD_BEVERAGE;
@@ -63,7 +63,7 @@ CREATE STAGE IF NOT EXISTS FB_STAGE
     url = 's3://logbrain-datalake/datasets/food-beverage/';
 ```
 
-### Étape 2 — Tables créées dans FB_BRONZE
+### Étape 2 - Tables créées dans FB_BRONZE
 
 | Table | Source | Format | 
 |---|---|---|
@@ -79,7 +79,7 @@ CREATE STAGE IF NOT EXISTS FB_STAGE
 | `supplier_information` | `supplier_information.csv` | CSV | 
 | `employee_records` | `employee_records.csv` | CSV |
 
-### Étape 3 — Chargement
+### Étape 3 - Chargement
 
 Trois formats de fichier déclarés :
 
@@ -102,7 +102,7 @@ CREATE OR REPLACE FILE FORMAT csv_reviews
 
 > **Fichiers JSON** : ingérés via tables VARIANT intermédiaires (`Json_inventory`, `Json_store_location`), puis transférés dans les tables structurées via `INSERT INTO ... SELECT v:field::TYPE`, avant suppression des tables VARIANT.
 
-### Étape 4 — Vérifications
+### Étape 4 - Vérifications
 
 ```sql
 -- Contrôles clés sur financial_transactions
@@ -119,7 +119,7 @@ FROM financial_transactions;
 
 ---
 
-### Étape 5 — Data Cleaning (schéma FB_SILVER)
+### Étape 5 - Data Cleaning (schéma FB_SILVER)
 
 Pour chaque table BRONZE, une table `*_clean` est créée dans `FB_SILVER`. Voici les règles appliquées :
 
@@ -133,8 +133,8 @@ Pour chaque table BRONZE, une table `*_clean` est créée dans `FB_SILVER`. Voic
 
 **`customer_demographics_clean`**
 - `REGEXP_REPLACE` pour supprimer les titres (MD, DDS, PhD, Jr., Sr., IV, III)
-- `COALESCE(NULLIF(GENDER,''), 'Other')` — genre manquant → `'Other'`
-- `COALESCE(NULLIF(MARITAL_STATUS,''), 'Unknown')` — statut manquant → `'Unknown'`
+- `COALESCE(NULLIF(GENDER,''), 'Other')` - genre manquant → `'Other'`
+- `COALESCE(NULLIF(MARITAL_STATUS,''), 'Unknown')` - statut manquant → `'Unknown'`
 - `UPPER` sur REGION, `INITCAP` sur COUNTRY et CITY
 
 **`financial_transactions_clean`**
@@ -146,51 +146,51 @@ Pour chaque table BRONZE, une table `*_clean` est créée dans `FB_SILVER`. Voic
 - Filtre `END_DATE >= START_DATE` + exclusion des régions aberrantes (`'0'`, `'1'`)
 
 **`marketing_campaigns_clean`**
-- `REPLACE(BUDGET, ' ', '')` puis `CAST AS NUMBER(15,2)` — les montants contenaient des espaces comme séparateurs de milliers
+- `REPLACE(BUDGET, ' ', '')` puis `CAST AS NUMBER(15,2)` - les montants contenaient des espaces comme séparateurs de milliers
 - Même traitement pour `REACH`
 - Filtre `END_DATE >= START_DATE`
 
 **`product_reviews_clean`**
-- `REGEXP_REPLACE(REVIEW_TEXT, '<br\s*/?>', ' ')` — suppression des balises HTML
+- `REGEXP_REPLACE(REVIEW_TEXT, '<br\s*/?>', ' ')` - suppression des balises HTML
 - `INITCAP` sur reviewer_name, review_title, product_category
 
 **`inventory_clean`**
-- `GREATEST(CURRENT_STOCK, 0)` — pas de stock négatif
-- `GREATEST(REORDER_POINT, 50)` — seuil minimum à 50 unités
-- `GREATEST(LEAD_TIME, 1)` — délai minimum à 1 jour
+- `GREATEST(CURRENT_STOCK, 0)` - pas de stock négatif
+- `GREATEST(REORDER_POINT, 50)` - seuil minimum à 50 unités
+- `GREATEST(LEAD_TIME, 1)` - délai minimum à 1 jour
 
 **`logistics_shipping_clean`**
-- `COALESCE(NULLIF(DESTINATION_REGION,''), 'UNKNOWN')` — régions vides traitées
-- `COALESCE(NULLIF(DESTINATION_COUNTRY,''), 'UNKNOWN')` — pays vides traités
+- `COALESCE(NULLIF(DESTINATION_REGION,''), 'UNKNOWN')` - régions vides traitées
+- `COALESCE(NULLIF(DESTINATION_COUNTRY,''), 'UNKNOWN')` - pays vides traités
 
 **`supplier_information_clean`**
-- `CASE WHEN RELIABILITY_SCORE > 1 THEN 1 WHEN < 0 THEN 0 ELSE ...` — bornes [0,1]
+- `CASE WHEN RELIABILITY_SCORE > 1 THEN 1 WHEN < 0 THEN 0 ELSE ...` - bornes [0,1]
 
 **`employee_records_clean`**
-- `REPLACE(SALARY, ' ', '')` puis `CAST AS NUMBER(12,2)` — salaires avec espaces
-- `LOWER(TRIM(EMAIL))` — normalisation des emails
+- `REPLACE(SALARY, ' ', '')` puis `CAST AS NUMBER(12,2)` - salaires avec espaces
+- `LOWER(TRIM(EMAIL))` - normalisation des emails
 
 ---
 
-## Phase 2 — Exploration & Analyses Business
+## Phase 2 - Exploration & Analyses Business
 
-### Partie 2.1 — Périmètre des datasets (schéma SILVER)
+### Partie 2.1 - Périmètre des datasets (schéma SILVER)
 
 | Table | Périmètre métier | KPI central |
 |---|---|---|
 | `customer_demographics_clean` | Référentiel clients socio-démographique | `ANNUAL_INCOME` |
 | `customer_service_interactions_clean` | Qualité de service & satisfaction | `CUSTOMER_SATISFACTION` |
-| `financial_transactions_clean` | Flux financiers — revenus et dépenses | `AMOUNT` (ventes) |
+| `financial_transactions_clean` | Flux financiers - revenus et dépenses | `AMOUNT` (ventes) |
 | `promotion_data_clean` | Offres commerciales et remises | `DISCOUNT_RATE` |
 | `marketing_campaigns_clean` | Performance & ROI marketing | `CONVERSION_RATE` |
-| `product_reviews_clean` | Voix du client — satisfaction produit | `RATING` |
+| `product_reviews_clean` | Voix du client - satisfaction produit | `RATING` |
 | `inventory_clean` | Niveaux de stock & réapprovisionnement | `CURRENT_STOCK` vs `REORDER_POINT` |
 | `store_location_clean` | Réseau de points de vente physiques | `EMPLOYEE_COUNT`, `SQUARE_FOOTAGE` |
 | `logistics_shipping_clean` | Suivi des expéditions & délais | `SHIPPING_COST`, `STATUS` |
 | `supplier_information_clean` | Fiabilité & qualité fournisseurs | `RELIABILITY_SCORE` |
-| `employee_records_clean` | RH — effectifs, postes, masse salariale | `ANNUAL_SALARY` |
+| `employee_records_clean` | RH - effectifs, postes, masse salariale | `ANNUAL_SALARY` |
 
-### Partie 2.2 — Analyses exploratoires
+### Partie 2.2 - Analyses exploratoires
 
 Contrôles systématiques appliqués à chaque table :
 - Comptage de lignes (`COUNT(*)`)
@@ -201,9 +201,9 @@ Contrôles systématiques appliqués à chaque table :
 
 ---
 
-### Phase 3 — Data Products & Analytics
+### Phase 3 - Data Products & Analytics
 
-#### Schéma ANALYTICS — 3 vues enrichies
+#### Schéma ANALYTICS - 3 vues enrichies
 
 ##### `PROMOTIONS_ACTIVES`
 Vue combinant promotions et transactions financières pour mesurer l'impact réel des promotions sur les ventes.
@@ -242,8 +242,8 @@ Vue consolidée à la maille région, croisant 4 sources de données :
 | Efficacité des campagnes | `marketing_campaigns_clean` |
 
 **KPIs calculés :**
-- `PROMO_SALES_SHARE_PCT` — part des ventes réalisées en période promo
-- `REACH_PER_BUDGET` — efficacité media des campagnes
+- `PROMO_SALES_SHARE_PCT` - part des ventes réalisées en période promo
+- `REACH_PER_BUDGET` - efficacité media des campagnes
 - `DOMINANT_CAMPAIGN_TYPE` / `DOMINANT_TARGET_AUDIENCE`
 
 ---
